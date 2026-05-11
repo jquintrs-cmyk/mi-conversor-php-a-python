@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHP → Python Converter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.25rem; }
+  header { display: flex; align-items: center; gap: 10px; }
+  .badge { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 5px; }
+  .badge.php { background: #EEEDFE; color: #3C3489; border: 1px solid #AFA9EC; }
+  .badge.py  { background: #E1F5EE; color: #085041; border: 1px solid #5DCAA5; }
+  h1 { font-size: 18px; font-weight: 500; color: #111; }
+  .config-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #fff; border: 1px solid #e0dfd8; border-radius: 10px; padding: 12px 16px; }
+  .config-row label { font-size: 12px; color: #666; white-space: nowrap; }
+  .config-row input { flex: 1; min-width: 220px; padding: 7px 10px; font-size: 12px; font-family: monospace; border: 1px solid #ddd; border-radius: 6px; outline: none; background: #fafafa; }
+  .config-row input:focus { border-color: #7F77DD; }
+  .config-row select { padding: 7px 10px; font-size: 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; outline: none; cursor: pointer; }
+  .editors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 620px) { .editors { grid-template-columns: 1fr; } }
+  .panel { display: flex; flex-direction: column; gap: 6px; }
+  .panel-label { font-size: 12px; font-weight: 500; color: #555; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.php { background: #7F77DD; }
+  .dot.py  { background: #1D9E75; }
+  textarea { width: 100%; height: 280px; resize: vertical; padding: 12px; background: #fff; border: 1px solid #e0dfd8; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12.5px; line-height: 1.6; color: #1a1a1a; outline: none; transition: border-color 0.15s; }
+  textarea:focus { border-color: #7F77DD; }
+  textarea.output { background: #fafaf8; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .examples { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .ex-label { font-size: 11px; color: #999; }
+  .example-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; background: #f0efe8; color: #555; border: 1px solid #ddd; cursor: pointer; }
+  .example-btn:hover { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
+  .btn-convert { padding: 9px 22px; font-size: 13px; font-weight: 500; background: #534AB7; color: #fff; border: none; border-radius: 7px; cursor: pointer; }
+  .btn-convert:hover { background: #3C3489; }
+  .btn-convert:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-sec { padding: 9px 14px; font-size: 13px; background: #fff; color: #555; border: 1px solid #ddd; border-radius: 7px; cursor: pointer; }
+  .btn-sec:hover { background: #f5f4f0; }
+  .btn-copy { padding: 9px 14px; font-size: 13px; background: #fff; color: #555; border: 1px solid #ddd; border-radius: 7px; cursor: pointer; margin-left: auto; }
+  .btn-copy:hover { background: #f5f4f0; }
+  .btn-copy.ok { background: #E1F5EE; color: #085041; border-color: #5DCAA5; }
+  .status { font-size: 12px; color: #888; display: flex; align-items: center; gap: 6px; }
+  .spinner { width: 12px; height: 12px; border: 1.5px solid #ddd; border-top-color: #534AB7; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+  .spinner.on { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .notes { background: #fff; border: 1px solid #e0dfd8; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #555; line-height: 1.7; display: none; white-space: pre-wrap; }
+  .notes.on { display: block; }
+  .error { background: #FCEBEB; border: 1px solid #F09595; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #A32D2D; line-height: 1.6; display: none; white-space: pre-wrap; }
+  .error.on { display: block; }
+  .backend-hint { font-size: 11px; color: #999; }
+  .backend-hint a { color: #534AB7; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span class="badge php">PHP</span>
+    <span style="color:#aaa;font-size:18px;">→</span>
+    <span class="badge py">Python</span>
+    <h1>Agente convertidor</h1>
+  </header>
+
+  <div class="config-row">
+    <label for="backend">URL del backend:</label>
+    <input type="text" id="backend" placeholder="https://tu-app.railway.app" />
+    <select id="mode">
+      <option value="standard">Conversión estándar</option>
+      <option value="pythonic">Estilo Pythónico</option>
+      <option value="typed">Con type hints</option>
+      <option value="async">Con async/await</option>
+    </select>
+    <span class="backend-hint">Deploy en <a href="https://railway.app" target="_blank">Railway</a> gratis</span>
+  </div>
+
+  <div class="examples">
+    <span class="ex-label">Ejemplos:</span>
+    <button class="example-btn" onclick="load('clase')">Clase con herencia</button>
+    <button class="example-btn" onclick="load('array')">Arrays</button>
+    <button class="example-btn" onclick="load('pdo')">PDO / DB</button>
+    <button class="example-btn" onclick="load('api')">Curl / API</button>
+  </div>
+
+  <div class="editors">
+    <div class="panel">
+      <div class="panel-label"><span class="dot php"></span> Código PHP</div>
+      <textarea id="php" spellcheck="false" placeholder="<?php
+// Pegá tu código PHP aquí...
+
+function saludar($nombre) {
+    return 'Hola, ' . $nombre . '!';
+}
+
+echo saludar('mundo');"></textarea>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot py"></span> Código Python</div>
+      <textarea id="py" class="output" spellcheck="false" readonly placeholder="# El código Python aparecerá aquí..."></textarea>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-convert" id="btn" onclick="convert()">Convertir →</button>
+    <button class="btn-sec" onclick="clear_all()">Limpiar</button>
+    <div class="status"><div class="spinner" id="spin"></div><span id="st"></span></div>
+    <button class="btn-copy" id="cp" onclick="copy_py()">Copiar Python</button>
+  </div>
+
+  <div class="error" id="err"></div>
+  <div class="notes" id="notes"></div>
+
+</div>
+<script>
+const EX = {
+  clase:`<?php
+class Animal {
+    protected string $nombre;
+    protected int $edad;
+    public function __construct(string $nombre, int $edad) {
+        $this->nombre = $nombre;
+        $this->edad = $edad;
+    }
+    public function describir(): string {
+        return "Soy {$this->nombre} y tengo {$this->edad} años.";
+    }
+}
+class Perro extends Animal {
+    private string $raza;
+    public function __construct(string $nombre, int $edad, string $raza) {
+        parent::__construct($nombre, $edad);
+        $this->raza = $raza;
+    }
+    public function ladrar(): string { return "Soy un {$this->raza}."; }
+}
+$p = new Perro("Rex", 3, "Labrador");
+echo $p->describir();
+echo $p->ladrar();`,
+  array:`<?php
+$frutas = ["manzana", "banana", "naranja", "pera"];
+$largas = array_filter($frutas, fn($f) => strlen($f) > 5);
+$mayus  = array_map('strtoupper', $frutas);
+$concat = array_reduce($frutas, fn($c, $i) => $c . ', ' . $i, '');
+sort($frutas);
+$precios = ["manzana" => 1.50, "banana" => 0.75, "naranja" => 2.00];
+foreach ($precios as $f => $p) { echo "$f: $p\n"; }`,
+  pdo:`<?php
+$pdo = new PDO("mysql:host=localhost;dbname=tienda", "user", "pass");
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$stmt = $pdo->prepare("INSERT INTO productos (nombre, precio) VALUES (:n, :p)");
+$stmt->execute([':n' => 'Laptop', ':p' => 999.99]);
+$id = $pdo->lastInsertId();
+$stmt = $pdo->prepare("SELECT * FROM productos WHERE precio < :max ORDER BY nombre");
+$stmt->execute([':max' => 500]);
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($rows as $r) { echo "{$r['nombre']}: {$r['precio']}\n"; }`,
+  api:`<?php
+function fetchUsuario(int $id): array {
+    $ch = curl_init("https://jsonplaceholder.typicode.com/users/{$id}");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $res  = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($code !== 200) throw new RuntimeException("HTTP $code");
+    return json_decode($res, true);
+}
+try {
+    $u = fetchUsuario(1);
+    echo "Nombre: {$u['name']}\nEmail: {$u['email']}\n";
+} catch (RuntimeException $e) { echo "Error: ".$e->getMessage(); }`
+};
+
+function load(k){ document.getElementById('php').value=EX[k]; document.getElementById('py').value=''; hide(); }
+function hide(){ document.getElementById('err').className='error'; document.getElementById('notes').className='notes'; document.getElementById('st').textContent=''; }
+function clear_all(){ document.getElementById('php').value=''; document.getElementById('py').value=''; hide(); }
+function setst(t){ document.getElementById('st').textContent=t; }
+
+async function convert(){
+  const php = document.getElementById('php').value.trim();
+  const url = document.getElementById('backend').value.trim();
+  if(!php){ show_err('Pegá código PHP primero.'); return; }
+  if(!url){ show_err('Ingresá la URL de tu backend (ej: https://tu-app.railway.app).'); return; }
+
+  hide();
+  const btn=document.getElementById('btn'), sp=document.getElementById('spin');
+  btn.disabled=true; sp.className='spinner on'; setst('Convirtiendo...');
+
+  try{
+    const r = await fetch(url.replace(/\/$/,'')+'/convert', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ php_code: php, mode: document.getElementById('mode').value })
+    });
+    if(!r.ok){ const t=await r.text(); show_err('Error del servidor: '+r.status+'\n'+t); return; }
+    const d = await r.json();
+    document.getElementById('py').value = d.python || '';
+    if(d.notas){ const n=document.getElementById('notes'); n.textContent='Notas:\n'+d.notas; n.className='notes on'; }
+    setst('Completado.');
+  } catch(e){
+    show_err('No se pudo conectar al backend.\nVerificá que la URL sea correcta y el servidor esté corriendo.\n\nDetalle: '+e.message);
+  } finally {
+    btn.disabled=false; sp.className='spinner';
+  }
+}
+
+function show_err(m){ const e=document.getElementById('err'); e.textContent=m; e.className='error on'; setst(''); }
+
+function copy_py(){
+  const t=document.getElementById('py').value; if(!t) return;
+  navigator.clipboard.writeText(t).then(()=>{
+    const b=document.getElementById('cp'); b.textContent='Copiado!'; b.className='btn-copy ok';
+    setTimeout(()=>{ b.textContent='Copiar Python'; b.className='btn-copy'; },2000);
+  });
+}
+</script>
+</body>
+</html>
