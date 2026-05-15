@@ -70,7 +70,7 @@ Código PHP:
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-3-5-sonnet-latest",
+                "model": "claude-3-5-sonnet-20240620",
                 "max_tokens": 2000,
                 "system": "Respondés únicamente con JSON válido. Nunca usás bloques de markdown ni texto fuera del JSON.",
                 "messages": [{"role": "user", "content": prompt}],
