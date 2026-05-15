@@ -6,6 +6,16 @@ import os
 
 app = FastAPI()
 
+# --- PEGÁ ESTO DESDE ACÁ --- (esto lo hice con Gemini)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# --- HASTA ACÁ --- (esto lo hice con Gemini)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
