@@ -66,11 +66,11 @@ Código PHP:
             ANTHROPIC_URL,
             headers={
                 "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
+                "anthropic-version": "2023-06-01",  
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-3-5-sonnet-20240620",
+                "model": "claude-3-opus-20240229",
                 "max_tokens": 2000,
                 "system": "Respondés únicamente con JSON válido. Nunca usás bloques de markdown ni texto fuera del JSON.",
                 "messages": [{"role": "user", "content": prompt}],

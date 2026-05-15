@@ -2,3 +2,4 @@ fastapi
 uvicorn[standard]
 httpx
 pydantic
+anthropic>=0.30.0
