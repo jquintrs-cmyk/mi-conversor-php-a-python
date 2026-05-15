@@ -61,7 +61,7 @@ Código PHP:
                     "content-type": "application/json",
                 },
                 json={
-                    "model": "claude-3-5-sonnet-20240620", # El mejor modelo actual
+                    "model": "claude-3-haiku-20240307", # El mejor modelo actual
                     "max_tokens": 2048,
                     "system": "Respondés únicamente con JSON válido. No uses markdown.",
                     "messages": [{"role": "user", "content": prompt}],
