@@ -42,7 +42,7 @@ async def convert(req: ConvertRequest):
     }
 
     payload = {
-        "model": "claude-3-5-sonnet-latest", # Volvemos al modelo estándar del 2026 ya con tu saldo activo
+        "model": "claude-3-5-sonnet-20240620", # Volvemos al modelo estándar del 2026 ya con tu saldo activo
         "max_tokens": 2048,
         "messages": [{"role": "user", "content": prompt}]
     }
