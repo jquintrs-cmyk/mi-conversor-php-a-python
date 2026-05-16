@@ -60,7 +60,7 @@ Código PHP:
     }
 
     payload = {
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-haiku-4-5",
         "max_tokens": 2000,
         "system": "Respondés únicamente con JSON válido. Nunca usás bloques de markdown ni texto fuera del JSON.",
         "messages": [{"role": "user", "content": prompt}],
