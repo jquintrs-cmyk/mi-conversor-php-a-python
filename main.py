@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from anthropic import Anthropic
+import httpx
 import os
 import json
 
@@ -15,8 +15,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# El SDK oficial maneja la URL y la versión de API de forma nativa e interna
-client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "").strip())
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+
+MODE_DESC = {
+    "standard": "Conversión directa y fiel a la estructura original.",
+    "pythonic": "Usando idioms pythónicos: list comprehensions, generadores, context managers.",
+    "typed":    "Incluyendo type hints completos (PEP 484).",
+    "async":    "Convirtiendo operaciones I/O a async/await con asyncio.",
+}
 
 class ConvertRequest(BaseModel):
     php_code: str
@@ -24,27 +31,57 @@ class ConvertRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "php2python"}
 
 @app.post("/convert")
 async def convert(req: ConvertRequest):
-    if not client.api_key:
-        raise HTTPException(500, "Falta la ANTHROPIC_API_KEY en Railway")
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(500, "Falta la ANTHROPIC_API_KEY en el servidor.")
 
-    prompt = f"Convertí este código PHP a Python limpio. Devolvé un JSON con las llaves 'python' y 'notas'. Código:\n{req.php_code}"
+    mode_desc = MODE_DESC.get(req.mode, MODE_DESC["standard"])
+
+    prompt = f"""Convertí el siguiente código PHP a Python. Modo: {mode_desc}
+
+Respondé ÚNICAMENTE con un objeto JSON válido con estos dos campos:
+- "python": string con el código Python limpio (sin bloques markdown)
+- "notas": string en español con 2-4 observaciones breves sobre diferencias clave, separadas por saltos de línea con guión
+
+No agregues texto fuera del JSON.
+
+Código PHP:
+```php
+{req.php_code}
+```"""
+
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+    payload = {
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 2000,
+        "system": "Respondés únicamente con JSON válido. Nunca usás bloques de markdown ni texto fuera del JSON.",
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
+    async with httpx.AsyncClient(timeout=40.0) as client:
+        try:
+            resp = await client.post(ANTHROPIC_URL, headers=headers, json=payload)
+        except Exception as e:
+            raise HTTPException(500, f"Error de conexión: {str(e)}")
+
+    if resp.status_code != 200:
+        raise HTTPException(resp.status_code, f"Error de Anthropic: {resp.text}")
+
+    data = resp.json()
 
     try:
-        # Dejamos que el SDK oficial maneje la petición al modelo estable de 2026
-        message = client.messages.create(
-            model="claude-3-opus-20240229",
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        
-        raw_response = message.content[0].text
-        clean_json = raw_response.replace("```json", "").replace("```", "").strip()
-        return json.loads(clean_json)
+        raw = data["content"][0]["text"]
+        clean = raw.replace("```json", "").replace("```", "").strip()
+        result = json.loads(clean)
+    except Exception:
+        result = {"python": raw if "raw" in locals() else "Error al procesar", "notas": ""}
 
-    except Exception as e:
-        # Si falla, el SDK nos va a escupir el error exacto de la consola de Anthropic
-        raise HTTPException(status_code=400, detail=f"Error del SDK de Anthropic: {str(e)}")
+    return result
